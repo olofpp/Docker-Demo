@@ -39,7 +39,6 @@ services:
     container_name: "portainer"
     restart: always
     volumes:
-      #- "./ca/intermediate.cert.pem:/etc/ssl/certs/intermediate.cert.pem"
       - ./portainer/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
