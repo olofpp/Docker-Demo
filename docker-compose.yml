@@ -1,0 +1,63 @@
+version: "3.5"
+
+services:
+
+  traefik:
+    image: "traefik:v3.0.1"
+    container_name: "traefik"
+    restart: always
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker
+      - --providers.file.directory=/etc/traefik/dynamic_conf
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./certs/:/certs/"
+      - "./traefik:/etc/traefik/dynamic_conf/"
+    labels:
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAINNAME}`) "
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+    networks:
+      - public
+      - monitor-net
+
+  portainer:
+    image: "portainer/portainer-ce:latest"
+    container_name: "portainer"
+    restart: always
+    volumes:
+      #- "./ca/intermediate.cert.pem:/etc/ssl/certs/intermediate.cert.pem"
+      - ./portainer/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.http.middlewares.portainer_https.redirectscheme.scheme=https"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAINNAME}`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+    networks:
+      - public
+
+networks:
+  public:
+    name: global_public
+  internal:
+    driver: bridge
+  monitor-net:
+    name: monitor_net
+    driver: bridge

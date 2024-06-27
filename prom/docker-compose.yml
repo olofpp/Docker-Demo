@@ -1,0 +1,151 @@
+version: "3.5"
+
+services:
+
+  prometheus:
+    image: prom/prometheus
+    container_name: "prometheus"
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - ./prometheus_data:/prometheus
+      - ./prometheus/rules:/etc/prometheus/rules
+      - ./prometheus/targets.yml:/etc/prometheus/targets.yml:ro
+    extra_hosts:
+      - "prometheus.heroma.test:10.67.107.24"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - monitor-net    
+    labels:
+    - "traefik.http.routers.prometheus.tls=true"
+    - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    - "traefik.enable=true"
+    - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAINNAME}`)"
+    - "traefik.http.routers.prometheus.entrypoints=web"
+    - "traefik.http.routers.prometheus.entrypoints=websecure"
+
+  node-exporter:
+    image: prom/node-exporter
+    container_name: "node-exporter"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    networks:
+      - monitor-net
+    labels:
+    - "traefik.http.routers.node-exporter.tls=true"
+    - "traefik.http.services.node-exporter.loadbalancer.server.port=9100"
+    - "traefik.enable=true"
+    - "traefik.http.routers.node-exporter.rule=Host(`node-exporter.${DOMAINNAME}`)"
+    - "traefik.http.routers.node-exporter.entrypoints=web"
+    - "traefik.http.routers.node-exporter.entrypoints=websecure"
+
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: "alertmanager"
+    volumes:
+      - "./alertmanager/:/etc/alertmanager/"
+    networks:
+      - monitor-net
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    labels:
+    - "traefik.http.routers.alertmanager.tls=true"
+    - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+    - "traefik.enable=true"
+    - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${DOMAINNAME}`)"
+    - "traefik.http.routers.alertmanager.entrypoints=web"
+    - "traefik.http.routers.alertmanager.entrypoints=websecure"
+
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: "cadvisor"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - monitor-net
+    labels:
+    - "traefik.http.routers.cadvisor.tls=true"
+    - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+    - "traefik.enable=true"
+    - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.${DOMAINNAME}`)"
+    - "traefik.http.routers.cadvisor.entrypoints=web"
+    - "traefik.http.routers.cadvisor.entrypoints=websecure"
+
+#    pushgateway:
+#     image: prom/pushgateway
+#     container_name: "pushgateway"
+#     volumes:
+#       - /:/rootfs:ro
+#       - /var/run:/var/run:rw
+#       - /sys:/sys:ro
+#       - /var/lib/docker/:/var/lib/docker:ro
+#     networks:
+#       - monitor-net
+#     labels:
+#     - "traefik.http.routers.pushgateway.tls=true"
+#     - "traefik.http.services.pushgateway.loadbalancer.server.port=9091"
+#     - "traefik.enable=true"
+#     - "traefik.http.routers.pushgateway.rule=Host(`pushgateway.${DOMAINNAME}`)"
+#     - "traefik.http.routers.pushgateway.entrypoints=web"
+#     - "traefik.http.routers.pushgateway.entrypoints=websecure"
+
+
+  grafana:
+    image: grafana/grafana:9.5.20
+    container_name: "grafana"
+    depends_on:
+      - prometheus
+    extra_hosts:
+      - "prometheus.heroma.test:10.67.107.24"
+      - "alertmanager.heroma.test:10.67.107.24"
+    volumes:
+      - ./grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/grafana.ini/:/etc/grafana/grafana.ini
+    environment:
+      - "GF_ALLOW_LOADING_UNSIGNED_PLUGINS=tribe-29-checkmk-datasource"
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - monitor-net
+    user: "472"
+    labels:
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAINNAME}`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+
+  blackbox-exporter:
+    image: "prom/blackbox-exporter:latest"
+    container_name: "blackbox"
+    restart: always
+    networks:
+    - monitor-net
+    volumes:
+    - "./config/blackbox-exporter/blackbox-exporter.yml:/etc/prometheus/blackbox-exporter.yml"
+    command:
+    - "--config.file=/etc/prometheus/blackbox-exporter.yml"
+
+
+networks:
+  monitor-net:
+    name: monitor_net
+    external: true

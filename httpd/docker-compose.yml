@@ -1,0 +1,42 @@
+version: "3.5"
+
+services:
+
+  httpd1:
+    image: docker-demo-httpd
+    container_name: httpd1
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - public
+    labels:
+    - "traefik.http.routers.httpd.tls=true"
+    - "traefik.http.services.httpd.loadbalancer.server.port=80"
+    - "traefik.enable=true"
+    - "traefik.http.routers.httpd.rule=Host(`httpd.${DOMAINNAME}`)"
+    - "traefik.http.routers.httpd.entrypoints=web"
+    - "traefik.http.routers.httpd.entrypoints=websecure"
+
+  httpd2:
+    image: docker-demo-httpd
+    container_name: httpd2
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - public
+    labels:
+    - "traefik.http.routers.httpd.tls=true"
+    - "traefik.http.services.httpd.loadbalancer.server.port=80"
+    - "traefik.enable=true"
+    - "traefik.http.routers.httpd.rule=Host(`httpd.${DOMAINNAME}`)"
+    - "traefik.http.routers.httpd.entrypoints=web"
+    - "traefik.http.routers.httpd.entrypoints=websecure"
+
+
+
+networks:
+  public:
+    name: global_public
+    external: true
+
+

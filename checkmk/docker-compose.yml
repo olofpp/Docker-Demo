@@ -1,0 +1,29 @@
+version: "3.5"
+
+services:
+
+  checkmk:
+    image: checkmk/check-mk-raw
+    container_name: checkmk
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./monitoring:/omd/sites
+      - /:/rootfs:ro
+    tmpfs:
+      - /opt/omd/sites/cmk/tmp:uid=1000,gid=1000
+    ports:
+      - 8000:8000
+    networks:
+      - monitor-net
+    labels:
+    - "traefik.http.routers.checkmk.tls=true"
+    - "traefik.http.services.checkmk.loadbalancer.server.port=5000"
+    - "traefik.enable=true"
+    - "traefik.http.routers.checkmk.rule=Host(`checkmk.${DOMAINNAME}`)"
+    - "traefik.http.routers.checkmk.entrypoints=web"
+    - "traefik.http.routers.checkmk.entrypoints=websecure"
+
+networks:
+  monitor-net:
+    name: monitor_net
+    external: true
