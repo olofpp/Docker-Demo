@@ -69,7 +69,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       labels:
-        #- "traefik.docker.network=public"
         - "traefik.http.middlewares.portainer_https.redirectscheme.scheme=https"
         - "traefik.http.routers.portainer.tls=true"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
