@@ -1,10 +1,9 @@
 FROM alpine
 
 RUN apk update
-RUN apk add apache2
-RUN apk add apache2-utils
+RUN apk add apache2 apache2-utils
 
-COPY index.html /var/www/localhost/htdocs/index.html 
+#COPY index.html /var/www/localhost/htdocs/index.html 
 
 EXPOSE 80
 
