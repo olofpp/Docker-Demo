@@ -65,7 +65,7 @@ services:
   portainer:
     image: "portainer/portainer-ce:latest"
     volumes:
-      - ./portainer/data:/data
+      - traefik-public:/data
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       labels:
@@ -84,6 +84,8 @@ services:
     networks:
       - traefik-public
 
+volumes:
+  portainer_data:
 
 networks:
   traefik-public:
