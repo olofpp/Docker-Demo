@@ -116,7 +116,6 @@ services:
 
   blackbox-exporter:
     image: "prom/blackbox-exporter:latest"
-    restart: always
     networks:
     - monitor-net
     volumes:
