@@ -1,62 +1,95 @@
 version: "3.5"
 
+
 services:
 
   traefik:
-    image: "traefik:v3.0.1"
-    container_name: "traefik"
-    restart: always
+    image: "traefik"
     command:
+      - "--api.debug=true"
+      - "--providers.docker.watch=true"
       - --api.dashboard=true
       - --api.insecure=true
       - --providers.docker
+      - --providers.docker.exposedbydefault=false
       - --providers.file.directory=/etc/traefik/dynamic_conf
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entryPoints.web.address=:80
       - --entryPoints.websecure.address=:443
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm=true      
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
+      - target: 80
+        published: 80
+        mode: host
+        protocol: tcp
+      - target: 443
+        published: 443
+        mode: host
+        protocol: tcp
+      - target: 8080
+        published: 8080
+        mode: host
+        protocol: tcp
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./certs/:/certs/"
       - "./traefik:/etc/traefik/dynamic_conf/"
-    labels:
-      - "traefik.http.routers.traefik.tls=true"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAINNAME}`) "
-      - "traefik.http.routers.traefik.entrypoints=web"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
+    deploy:
+      labels:
+        - "traefik.http.routers.traefik.tls=true"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        - "traefik.enable=true"
+        - "traefik.http.routers.traefik.rule=Host(`traefik.heroma.test`) "
+        - "traefik.http.routers.traefik.entrypoints=web"
+        - "traefik.http.routers.traefik.entrypoints=websecure"
+      mode: global
+      update_config:
+        parallelism: 1
+        delay: 10s
+        # order: start-first
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager
     networks:
-      - public
+      - traefik-public
       - monitor-net
 
   portainer:
     image: "portainer/portainer-ce:latest"
-    container_name: "portainer"
-    restart: always
     volumes:
       - ./portainer/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-    labels:
-      - "traefik.http.middlewares.portainer_https.redirectscheme.scheme=https"
-      - "traefik.http.routers.portainer.tls=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.enable=true"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAINNAME}`)"
-      - "traefik.http.routers.portainer.entrypoints=web"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
+    deploy:
+      labels:
+        #- "traefik.docker.network=public"
+        - "traefik.http.middlewares.portainer_https.redirectscheme.scheme=https"
+        - "traefik.http.routers.portainer.tls=true"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        - "traefik.enable=true"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.heroma.test`)"
+        - "traefik.http.routers.portainer.entrypoints=web"
+        - "traefik.http.routers.portainer.entrypoints=websecure"
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
     networks:
-      - public
+      - traefik-public
+
 
 networks:
-  public:
-    name: global_public
-  internal:
-    driver: bridge
+  traefik-public:
+    name: traefik-public
+    driver: overlay
   monitor-net:
-    name: monitor_net
-    driver: bridge
+    driver: overlay
+    name: monitor-net
