@@ -122,6 +122,7 @@ services:
     - "./config/blackbox-exporter/blackbox-exporter.yml:/etc/prometheus/blackbox-exporter.yml"
     command:
     - "--config.file=/etc/prometheus/blackbox-exporter.yml"
+    deploy:
 
 
 volumes:
