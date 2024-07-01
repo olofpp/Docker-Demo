@@ -7,7 +7,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
     networks:
-      - traefik-public
+      - web-net
     deploy:
       labels:
         - "traefik.http.routers.webclient.tls=true"
@@ -18,5 +18,5 @@ services:
         - "traefik.http.routers.webclient.entrypoints=websecure"
 
 networks:
-  traefik-public:
+  web-net:
     external: true
