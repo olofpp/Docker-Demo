@@ -3,7 +3,7 @@ version: "3.5"
 services:
 
   webclient:
-    image: demohttpd
+    image: webclient
     volumes:
       - /etc/localtime:/etc/localtime:ro
     networks:
