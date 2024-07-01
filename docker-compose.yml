@@ -6,8 +6,8 @@ services:
   traefik:
     image: "traefik"
     command:
-      - "--api.debug=true"
-      - "--providers.docker.watch=true"
+      - --api.debug=true
+      - --providers.docker.watch=true
       - --api.dashboard=true
       - --api.insecure=true
       - --providers.docker
