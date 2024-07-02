@@ -16,6 +16,8 @@ services:
         - "traefik.http.routers.webclient.rule=Host(`webclient.heroma.test`)"
         - "traefik.http.routers.webclient.entrypoints=web"
         - "traefik.http.routers.webclient.entrypoints=websecure"
+      mode: replicated
+      replicas: 2
 
 networks:
   web-net:
